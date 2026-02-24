@@ -610,10 +610,12 @@
     const loadMoreBtn = $('loadMoreBtn');
 
     // === API Key Management ===
+    const DEFAULT_API_KEY = 'AIzaSyDYdhJKW-IXi-c2hP6HiKoPURzAAIipYJw';
+
     function loadApiKey() {
         const saved = localStorage.getItem('yt_api_key');
         if (saved) { apiKey = saved; apiKeyInput.value = saved; updateApiStatus(true); }
-        else { updateApiStatus(false); }
+        else { apiKey = DEFAULT_API_KEY; apiKeyInput.value = DEFAULT_API_KEY; updateApiStatus(true); }
     }
 
     function updateApiStatus(saved) {
