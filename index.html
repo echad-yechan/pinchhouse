@@ -861,8 +861,11 @@
                     loadingText.textContent = `상세정보 로딩 중 (${newItems.length}개)...`;
                     await enrichItems(newItems);
 
+                    // Filter: 조회수 1,000회 이상만
+                    const filtered = newItems.filter(v => parseInt(v.viewCount) >= 1000);
+
                     // Add to main list
-                    allVideos = allVideos.concat(newItems);
+                    allVideos = allVideos.concat(filtered);
 
                     // Live render: re-sort & re-render everything
                     renderAllFromScratch();
