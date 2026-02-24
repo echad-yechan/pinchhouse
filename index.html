@@ -390,6 +390,27 @@
             letter-spacing: 0.5px;
         }
 
+        .paid-badge.keyword-badge {
+            background: #fe9800;
+        }
+
+        .matched-keywords {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+        }
+
+        .kw-chip {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            background: #fff8e1;
+            color: #e68a00;
+            font-weight: 500;
+        }
+
         .card-body {
             padding: 16px 18px 18px;
         }
@@ -698,14 +719,14 @@
         return d.toISOString();
     }
 
-    // === YouTube Search API — paid product placement filter ===
-    async function searchPage(query, pageToken) {
+    // === YouTube Search API ===
+    async function searchPage(query, pageToken, usePaidFilter) {
         const params = new URLSearchParams({
             part: 'snippet', type: 'video', q: query,
             maxResults: 50, order: 'date', key: apiKey,
-            videoPaidProductPlacement: 'true',
             relevanceLanguage: 'ko', regionCode: 'KR'
         });
+        if (usePaidFilter) params.set('videoPaidProductPlacement', 'true');
         const pa = getPublishedAfter();
         if (pa) params.set('publishedAfter', pa);
         if (pageToken) params.set('pageToken', pageToken);
@@ -745,7 +766,13 @@
         return results;
     }
 
-    // (Sponsor detection removed — using YouTube's paid product placement API filter instead)
+    // === Sponsor keyword detection (title + description) ===
+    const SPONSOR_KEYWORDS = ['협찬', '광고', '제공', '유료광고', 'sponsored', 'ad', '#ad', '#광고', '#협찬', '브랜디드', '브랜드 콘텐츠', '내돈내산 아님', '소정의 원고료'];
+
+    function detectSponsorKeywords(title, description) {
+        const text = (title + ' ' + description).toLowerCase();
+        return SPONSOR_KEYWORDS.filter(kw => text.includes(kw.toLowerCase()));
+    }
 
     // === Format Helpers ===
     function formatDate(isoStr) {
@@ -803,13 +830,21 @@
         const likes = formatViews(v.likeCount || '0');
         const comments = formatViews(v.commentCount || '0');
 
+        const isPaid = v.source === '유료광고';
+        const badgeClass = isPaid ? 'paid-badge' : 'paid-badge keyword-badge';
+        const badgeText = isPaid ? '유료광고' : '협찬 추정';
+        const kwHtml = (!isPaid && v.matchedKeywords?.length)
+            ? `<div class="matched-keywords">${v.matchedKeywords.map(k => `<span class="kw-chip">${escapeHtml(k)}</span>`).join('')}</div>`
+            : '';
+
         card.innerHTML = `
             <div class="thumb-wrapper">
                 <img src="${v.thumbnail}" alt="" loading="lazy">
-                <div class="paid-badge">유료광고</div>
+                <div class="${badgeClass}">${badgeText}</div>
             </div>
             <div class="card-body">
                 <div class="video-title">${title}</div>
+                ${kwHtml}
                 <div class="video-stats">
                     <span class="stat-views">${views}</span>
                     <span class="stat-likes">${likes}</span>
@@ -855,7 +890,77 @@
         });
     }
 
-    // === MAIN: Single-query, multi-page deep collection (paid product placement) ===
+    // === Collect one pass (paid API or keyword) ===
+    async function collectPass({ brand, maxTarget, existingIds, usePaidFilter, keywordQueries, sourceLabel, onProgress }) {
+        let collected = 0;
+        const queries = keywordQueries || [brand];
+
+        for (const query of queries) {
+            let pageToken = null;
+            let pageNum = 0;
+
+            while (allVideos.length < maxTarget && !stopRequested) {
+                pageNum++;
+                onProgress(query, pageNum);
+
+                const data = await searchPage(query, pageToken, usePaidFilter);
+                pageToken = data.nextPageToken || null;
+
+                const items = (data.items || []);
+                if (items.length === 0) break;
+
+                const newItems = [];
+                for (const item of items) {
+                    const vid = item.id?.videoId;
+                    if (!vid || existingIds.has(vid)) { totalRawFetched++; continue; }
+                    existingIds.add(vid);
+                    totalRawFetched++;
+                    newItems.push({
+                        id: vid,
+                        title: item.snippet.title,
+                        channel: item.snippet.channelTitle,
+                        thumbnail: item.snippet.thumbnails.high?.url || item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default?.url,
+                        publishedAt: item.snippet.publishedAt,
+                        viewCount: '0', likeCount: '0', commentCount: '0',
+                        description: '',
+                        source: sourceLabel,
+                        matchedKeywords: []
+                    });
+                }
+
+                if (newItems.length > 0) {
+                    loadingText.textContent = `상세정보 로딩 중 (${newItems.length}개)...`;
+                    await enrichItems(newItems);
+
+                    // 키워드 모드: 제목+설명에서 협찬 키워드 매칭 확인
+                    let filtered;
+                    if (!usePaidFilter) {
+                        filtered = newItems.filter(v => {
+                            const kws = detectSponsorKeywords(decodeHtml(v.title), v.description);
+                            if (kws.length > 0) { v.matchedKeywords = kws; return true; }
+                            return false;
+                        });
+                    } else {
+                        filtered = newItems;
+                    }
+
+                    // 조회수 1,000회 이상
+                    filtered = filtered.filter(v => parseInt(v.viewCount) >= 1000);
+                    allVideos = allVideos.concat(filtered);
+                    collected += filtered.length;
+                    renderAllFromScratch();
+                    updateProgress(allVideos.length, maxTarget, brand, pageNum);
+                }
+
+                if (!pageToken) break;
+            }
+
+            if (stopRequested || allVideos.length >= maxTarget) break;
+        }
+        return collected;
+    }
+
+    // === MAIN: Combined search — paid placement API + keyword detection ===
     async function doSearch() {
         const brand = brandInput.value.trim();
         if (!brand) { showError('브랜드명을 입력해주세요.'); return; }
@@ -878,60 +983,38 @@
 
         const maxTarget = parseInt(maxCollect.value);
         const existingIds = new Set();
+        let paidCount = 0, kwCount = 0;
 
         try {
-            let pageToken = null;
-            let pageNum = 0;
-
-            while (allVideos.length < maxTarget && !stopRequested) {
-                pageNum++;
-                updateProgress(allVideos.length, maxTarget, brand, pageNum);
-                loadingText.textContent = `"${brand}" 유료광고 검색 중 (페이지 ${pageNum})...`;
-
-                const data = await searchPage(brand, pageToken);
-                pageToken = data.nextPageToken || null;
-
-                const items = (data.items || []);
-                if (items.length === 0) break;
-
-                // Filter duplicates
-                const newItems = [];
-                for (const item of items) {
-                    const vid = item.id?.videoId;
-                    if (!vid || existingIds.has(vid)) { totalRawFetched++; continue; }
-                    existingIds.add(vid);
-                    totalRawFetched++;
-                    newItems.push({
-                        id: vid,
-                        title: item.snippet.title,
-                        channel: item.snippet.channelTitle,
-                        thumbnail: item.snippet.thumbnails.high?.url || item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default?.url,
-                        publishedAt: item.snippet.publishedAt,
-                        viewCount: '0',
-                        likeCount: '0',
-                        commentCount: '0',
-                        description: ''
-                    });
+            // --- Pass 1: 유료광고 API (videoPaidProductPlacement) ---
+            paidCount = await collectPass({
+                brand, maxTarget, existingIds,
+                usePaidFilter: true,
+                sourceLabel: '유료광고',
+                onProgress: (q, pg) => {
+                    updateProgress(allVideos.length, maxTarget, brand, pg);
+                    loadingText.textContent = `[1/2] "${brand}" 유료광고 검색 중 (페이지 ${pg})...`;
                 }
+            });
 
-                if (newItems.length > 0) {
-                    // Enrich with stats + description
-                    loadingText.textContent = `상세정보 로딩 중 (${newItems.length}개)...`;
-                    await enrichItems(newItems);
-
-                    // Filter: 조회수 1,000회 이상만
-                    const filtered = newItems.filter(v => parseInt(v.viewCount) >= 1000);
-
-                    // Add to main list
-                    allVideos = allVideos.concat(filtered);
-
-                    // Live render: re-sort & re-render everything
-                    renderAllFromScratch();
-                    updateProgress(allVideos.length, maxTarget, brand, pageNum);
-                }
-
-                // No more pages
-                if (!pageToken) break;
+            // --- Pass 2: 키워드 검색 (협찬/광고/제공 등) ---
+            if (!stopRequested && allVideos.length < maxTarget) {
+                const kwQueries = [
+                    `${brand} 협찬`,
+                    `${brand} 광고`,
+                    `${brand} 제공`,
+                    `${brand} sponsored`
+                ];
+                kwCount = await collectPass({
+                    brand, maxTarget, existingIds,
+                    usePaidFilter: false,
+                    keywordQueries: kwQueries,
+                    sourceLabel: '키워드',
+                    onProgress: (q, pg) => {
+                        updateProgress(allVideos.length, maxTarget, brand, pg);
+                        loadingText.textContent = `[2/2] "${q}" 키워드 검색 중 (페이지 ${pg})...`;
+                    }
+                });
             }
 
             progressBar.classList.remove('active');
@@ -940,9 +1023,8 @@
                 emptyState.innerHTML = `<div class="icon">&#128533;</div><p>검색 결과가 없습니다.<br>다른 브랜드명을 시도해보세요.</p>`;
                 emptyState.style.display = 'block';
             } else {
-                // Final full re-render with proper sort
                 renderAllFromScratch();
-                searchInfo.textContent = `"${brand}" 유료광고(구입한 항목) | ${pageNum}페이지 검색 완료`;
+                searchInfo.textContent = `"${brand}" | 유료광고 ${paidCount}건 + 키워드 ${kwCount}건`;
             }
 
         } catch (err) {
