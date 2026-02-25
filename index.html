@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube 유료광고 트래커</title>
+    <title>예광기 - YouTube 협찬/광고 트래커</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -18,7 +21,8 @@
         header {
             background: #fff;
             border-bottom: 1px solid #e5e8eb;
-            padding: 24px 0;
+            padding: 32px 0 24px;
+            text-align: center;
         }
 
         .container {
@@ -28,20 +32,30 @@
         }
 
         h1 {
-            font-size: 24px;
-            font-weight: 700;
+            font-family: 'Black Han Sans', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+            font-size: 52px;
+            font-weight: 900;
             color: #191f28;
-            margin-bottom: 4px;
-            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+            letter-spacing: -2px;
+            text-shadow:
+                2px 2px 0px #d1d6db,
+                4px 4px 0px #b0b8c1,
+                6px 6px 8px rgba(0, 0, 0, 0.12);
         }
 
         h1 span {
             color: #3182f6;
+            text-shadow:
+                2px 2px 0px #a3c9ff,
+                4px 4px 0px #7ab3ff,
+                6px 6px 8px rgba(49, 130, 246, 0.15);
         }
 
         .subtitle {
-            font-size: 13px;
+            font-size: 14px;
             color: #8b95a1;
+            margin-bottom: 4px;
         }
 
         /* API Key Section */
@@ -554,8 +568,8 @@
 
 <header>
     <div class="container">
-        <h1>YouTube <span>유료광고</span> 트래커</h1>
-        <p class="subtitle">경쟁사 브랜드의 유료 프로모션(구입한 항목) 영상을 모니터링하세요</p>
+        <h1><span>예</span>광기</h1>
+        <p class="subtitle">YouTube 협찬 / 유료광고 영상 추적기</p>
 
         <div class="api-section">
             <label>API Key</label>
