@@ -6,7 +6,7 @@
     <title>예광기 - YouTube 협찬/광고 트래커</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@700&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -20,7 +20,7 @@
 
         header {
             background: #fff;
-            border-bottom: 1px solid #e5e8eb;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
             padding: 32px 0 24px;
             text-align: center;
         }
@@ -32,24 +32,22 @@
         }
 
         h1 {
-            font-family: 'Black Han Sans', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
-            font-size: 52px;
-            font-weight: 900;
+            font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+            font-size: 48px;
+            font-weight: 700;
             color: #191f28;
             margin-bottom: 8px;
-            letter-spacing: -2px;
+            letter-spacing: -1px;
             text-shadow:
-                2px 2px 0px #d1d6db,
-                4px 4px 0px #b0b8c1,
-                6px 6px 8px rgba(0, 0, 0, 0.12);
+                1px 1px 0px #d1d6db,
+                2px 2px 4px rgba(0, 0, 0, 0.08);
         }
 
         h1 span {
             color: #3182f6;
             text-shadow:
-                2px 2px 0px #a3c9ff,
-                4px 4px 0px #7ab3ff,
-                6px 6px 8px rgba(49, 130, 246, 0.15);
+                1px 1px 0px #a3c9ff,
+                2px 2px 4px rgba(49, 130, 246, 0.1);
         }
 
         .subtitle {
@@ -61,8 +59,9 @@
         /* API Key Section */
         .api-section {
             background: #fff;
-            border: 1px solid #e5e8eb;
+            border: none;
             border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
             padding: 16px 20px;
             margin-top: 20px;
             display: flex;
@@ -147,8 +146,9 @@
         /* Search Section */
         .search-section {
             background: #fff;
-            border: 1px solid #e5e8eb;
+            border: none;
             border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
             padding: 24px;
             margin-top: 20px;
         }
@@ -335,8 +335,9 @@
 
         .video-card {
             background: #fff;
-            border: 1px solid #e5e8eb;
+            border: none;
             border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
             overflow: hidden;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
@@ -344,8 +345,7 @@
 
         .video-card:hover {
             transform: translateY(-4px);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
-            border-color: #d1d6db;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
         }
 
         .thumb-wrapper {
@@ -509,12 +509,13 @@
             padding: 14px 40px;
             font-size: 14px;
             border-radius: 12px;
-            border: 1px solid #e5e8eb;
+            border: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
         }
 
         .btn-load-more:hover {
             background: #f9fafb;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
         }
 
         /* Empty State */
@@ -537,8 +538,9 @@
         /* Error */
         .error-msg {
             background: #fff0f0;
-            border: 1px solid #ffd4d8;
+            border: none;
             border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
             padding: 14px 18px;
             margin-top: 16px;
             color: #f04452;
